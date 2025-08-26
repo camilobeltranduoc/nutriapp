@@ -22,7 +22,8 @@ import com.example.accesibilidad.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    onGoPreferences: () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -47,7 +48,16 @@ fun HomeScreen(
                 style = MaterialTheme.typography.headlineMedium
             )
 
-            // Acciones principales (ejemplos)
+            // Acciones principales
+
+            Button(
+                onClick = onGoPreferences,                // <- navega
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1565C0),
+                    contentColor = Color.White
+                )
+            ) { Text("Preferencias de accesibilidad") }
             Button(
                 onClick = {},
                 modifier = Modifier.fillMaxWidth(),

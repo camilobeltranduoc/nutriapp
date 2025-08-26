@@ -8,12 +8,13 @@ import com.example.accesibilidad.screens.ForgotScreen
 import com.example.accesibilidad.screens.HomeScreen
 import com.example.accesibilidad.screens.LoginScreen
 import com.example.accesibilidad.screens.RegisterScreen
-
+import com.example.accesibilidad.screens.PreferencesScreen
 object Routes {
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val FORGOT = "forgot"
     const val HOME = "home"
+    const val PREFERENCES = "preferences"
 }
 
 @Composable
@@ -47,8 +48,12 @@ fun AppNavHost(navController: NavHostController) {
                         popUpTo(0) { inclusive = true } // limpia todo el stack
                         launchSingleTop = true
                     }
-                }
+                },
+                onGoPreferences = { navController.navigate(Routes.PREFERENCES) }
             )
+        }
+        composable(Routes.PREFERENCES) {
+            PreferencesScreen(onBack = { navController.popBackStack() })
         }
     }
 }
