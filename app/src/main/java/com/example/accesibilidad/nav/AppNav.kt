@@ -4,21 +4,40 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.accesibilidad.accessibility.TtsController
 import com.example.accesibilidad.screens.ForgotScreen
 import com.example.accesibilidad.screens.HomeScreen
 import com.example.accesibilidad.screens.LoginScreen
-import com.example.accesibilidad.screens.RegisterScreen
 import com.example.accesibilidad.screens.PreferencesScreen
+import com.example.accesibilidad.screens.RegisterScreen
+import com.example.accesibilidad.screens.SearchRecipesScreen
+import com.example.accesibilidad.screens.CreateRecipeScreen
+import com.example.accesibilidad.ui.theme.AppThemeMode
+import com.example.accesibilidad.ui.theme.TextSizePref
+
 object Routes {
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val FORGOT = "forgot"
     const val HOME = "home"
     const val PREFERENCES = "preferences"
+    const val SEARCH = "search_recipes"
+    const val CREATE = "create_recipe"
 }
 
 @Composable
-fun AppNavHost(navController: NavHostController) {
+fun AppNavHost(
+    navController: NavHostController,
+    themeMode: AppThemeMode,
+    onThemeModeChange: (AppThemeMode) -> Unit,
+    highContrast: Boolean,
+    onHighContrastChange: (Boolean) -> Unit,
+    textSizePref: TextSizePref,
+    onTextSizeChange: (TextSizePref) -> Unit,
+    ttsEnabled: Boolean,
+    onTtsChange: (Boolean) -> Unit,
+    ttsController: TtsController
+) {
     NavHost(
         navController = navController,
         startDestination = Routes.LOGIN
@@ -32,28 +51,72 @@ fun AppNavHost(navController: NavHostController) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                         launchSingleTop = true
                     }
-                }
+                },
+                // ↓↓↓ nuevos para TTS
+                ttsEnabled = ttsEnabled,
+                speak = ttsController::speak
             )
         }
+
         composable(Routes.REGISTER) {
-            RegisterScreen(onBack = { navController.popBackStack() })
+            RegisterScreen(
+                onBack = { navController.popBackStack() },
+                ttsEnabled = ttsEnabled,
+                speak = ttsController::speak
+            )
         }
+
         composable(Routes.FORGOT) {
-            ForgotScreen(onBack = { navController.popBackStack() })
+            ForgotScreen(
+                onBack = { navController.popBackStack() },
+                ttsEnabled = ttsEnabled,
+                speak = ttsController::speak
+            )
         }
+
         composable(Routes.HOME) {
             HomeScreen(
                 onLogout = {
                     navController.navigate(Routes.LOGIN) {
-                        popUpTo(0) { inclusive = true } // limpia todo el stack
+                        popUpTo(0) { inclusive = true }
                         launchSingleTop = true
                     }
                 },
-                onGoPreferences = { navController.navigate(Routes.PREFERENCES) }
+                onGoPreferences = { navController.navigate(Routes.PREFERENCES) },
+                onGoSearchRecipes = { navController.navigate(Routes.SEARCH) },
+                onGoCreateRecipe = { navController.navigate(Routes.CREATE) },
+                ttsEnabled = ttsEnabled,
+                speak = ttsController::speak
             )
         }
+
         composable(Routes.PREFERENCES) {
-            PreferencesScreen(onBack = { navController.popBackStack() })
+            PreferencesScreen(
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
+                highContrast = highContrast,
+                onHighContrastChange = onHighContrastChange,
+                textSizePref = textSizePref,
+                onTextSizeChange = onTextSizeChange,
+                ttsEnabled = ttsEnabled,
+                onTtsChange = onTtsChange,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.SEARCH) {
+            SearchRecipesScreen(
+                onBack = { navController.popBackStack() },
+                ttsEnabled = ttsEnabled,
+                speak = ttsController::speak
+            )
+        }
+        composable(Routes.CREATE) {
+            CreateRecipeScreen(
+                onBack = { navController.popBackStack() },
+                ttsEnabled = ttsEnabled,
+                speak = ttsController::speak
+            )
         }
     }
 }
