@@ -14,6 +14,9 @@ import com.example.accesibilidad.screens.SearchRecipesScreen
 import com.example.accesibilidad.screens.CreateRecipeScreen
 import com.example.accesibilidad.ui.theme.AppThemeMode
 import com.example.accesibilidad.ui.theme.TextSizePref
+import com.example.accesibilidad.screens.EscribirScreen
+import com.example.accesibilidad.screens.BuscarDispositivoScreen
+import com.example.accesibilidad.screens.HablarScreen
 
 object Routes {
     const val LOGIN = "login"
@@ -23,6 +26,9 @@ object Routes {
     const val PREFERENCES = "preferences"
     const val SEARCH = "search_recipes"
     const val CREATE = "create_recipe"
+    const val ESCRIBIR = "escribir"
+    const val BUSCAR_DISPOSITIVO = "buscar_dispositivo"
+    const val HABLAR = "hablar"
 }
 
 @Composable
@@ -85,6 +91,7 @@ fun AppNavHost(
                 onGoPreferences = { navController.navigate(Routes.PREFERENCES) },
                 onGoSearchRecipes = { navController.navigate(Routes.SEARCH) },
                 onGoCreateRecipe = { navController.navigate(Routes.CREATE) },
+                onGoBuscarDispositivo = { navController.navigate(Routes.BUSCAR_DISPOSITIVO) },
                 ttsEnabled = ttsEnabled,
                 speak = ttsController::speak
             )
@@ -117,6 +124,13 @@ fun AppNavHost(
                 ttsEnabled = ttsEnabled,
                 speak = ttsController::speak
             )
+        }
+        composable(Routes.ESCRIBIR) {
+            EscribirScreen() // si necesitas onBack, pásalo y haz popBackStack
+        }
+
+        composable(Routes.BUSCAR_DISPOSITIVO) {
+            BuscarDispositivoScreen()
         }
     }
 }

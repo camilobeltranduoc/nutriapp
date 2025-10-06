@@ -5,28 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -40,8 +22,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.accesibilidad.R
-import com.example.accesibilidad.data.User
-import com.example.accesibilidad.data.UserRepo
+import com.example.accesibilidad.data.firebase.FirebaseUserRepo
+import com.google.firebase.auth.FirebaseAuthException
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,9 +40,11 @@ fun RegisterScreen(
 
     var showPwd  by rememberSaveable { mutableStateOf(false) }
     var showPwd2 by rememberSaveable { mutableStateOf(false) }
+    var loading  by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val focus   = LocalFocusManager.current
+    val scope   = rememberCoroutineScope()
 
     val isValid = user.isNotBlank() && email.isNotBlank() && pass.isNotBlank() && pass2.isNotBlank()
 
@@ -82,30 +67,19 @@ fun RegisterScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // Hero
             ElevatedCard(Modifier.fillMaxWidth()) {
-                Column(
-                    Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         "Crea tu cuenta",
                         style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.semantics { heading() }
                     )
-                    Text(
-                        "Completa los datos para empezar a usar NutriApp.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Text("Completa los datos para empezar a usar NutriApp.", style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
-            // Formulario
             ElevatedCard(Modifier.fillMaxWidth()) {
-                Column(
-                    Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
                     OutlinedTextField(
                         value = user,
@@ -113,13 +87,8 @@ fun RegisterScreen(
                         label = { Text("Usuario") },
                         singleLine = true,
                         leadingIcon = { Icon(Icons.Filled.AccountCircle, contentDescription = "Usuario") },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focus.moveFocus(FocusDirection.Down) }
-                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focus.moveFocus(FocusDirection.Down) }),
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -130,13 +99,8 @@ fun RegisterScreen(
                         singleLine = true,
                         leadingIcon = { Icon(Icons.Filled.Email, contentDescription = "Email") },
                         supportingText = { Text("Debe incluir @ y dominio") },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focus.moveFocus(FocusDirection.Down) }
-                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focus.moveFocus(FocusDirection.Down) }),
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -149,19 +113,11 @@ fun RegisterScreen(
                         visualTransformation = if (showPwd) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { showPwd = !showPwd }) {
-                                Icon(
-                                    if (showPwd) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                    contentDescription = if (showPwd) "Ocultar contraseña" else "Mostrar contraseña"
-                                )
+                                Icon(if (showPwd) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
                             }
                         },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focus.moveFocus(FocusDirection.Down) }
-                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focus.moveFocus(FocusDirection.Down) }),
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -174,63 +130,77 @@ fun RegisterScreen(
                         visualTransformation = if (showPwd2) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { showPwd2 = !showPwd2 }) {
-                                Icon(
-                                    if (showPwd2) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                    contentDescription = if (showPwd2) "Ocultar contraseña" else "Mostrar contraseña"
-                                )
+                                Icon(if (showPwd2) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
                             }
                         },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = { focus.clearFocus() }
-                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     Button(
                         onClick = {
-                            val msg = when {
+                            val precheck = when {
                                 user.isBlank() || pass.isBlank() || pass2.isBlank() || email.isBlank() ->
                                     "Completa todos los campos."
                                 !email.contains("@") || !email.contains(".") ->
                                     "Email no válido."
                                 pass != pass2 ->
                                     "Las contraseñas no coinciden."
-                                !UserRepo.canAddMore() ->
-                                    "Capacidad de usuarios alcanzada (5)."
-                                UserRepo.addUser(User(user.trim(), pass)) -> {
-                                    "Usuario creado, inicia sesión."
-                                }
-                                else -> "Usuario ya existe."
+                                pass.length < 6 ->
+                                    "La contraseña debe tener al menos 6 caracteres."
+                                else -> null
+                            }
+                            if (precheck != null) {
+                                Toast.makeText(context, precheck, Toast.LENGTH_SHORT).show()
+                                if (ttsEnabled) speak(precheck)
+                                return@Button
                             }
 
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                            if (ttsEnabled) speak(msg)
-
-                            if (msg.startsWith("Usuario creado")) {
-                                user = ""; email = ""; pass = ""; pass2 = ""
-                                onBack()
+                            // Registro REAL en Firebase con el EMAIL ingresado
+                            loading = true
+                            scope.launch {
+                                try {
+                                    FirebaseUserRepo.register(email.trim(), pass.trim())
+                                    val done = "Usuario creado, inicia sesión."
+                                    Toast.makeText(context, done, Toast.LENGTH_SHORT).show()
+                                    if (ttsEnabled) speak(done)
+                                    user = ""; email = ""; pass = ""; pass2 = ""
+                                    onBack()
+                                } catch (e: Exception) {
+                                    val err = mapAuthError(e)
+                                    Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
+                                    if (ttsEnabled) speak(err)
+                                } finally {
+                                    loading = false
+                                }
                             }
                         },
-                        enabled = isValid,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 56.dp)
-                    ) { Text("Registrar") }
+                        enabled = isValid && !loading,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                        colors = ButtonDefaults.buttonColors()
+                    ) {
+                        if (loading) {
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(12.dp))
+                        }
+                        Text(if (loading) "Registrando…" else "Registrar")
+                    }
                 }
             }
-
-            // Cupos
-            ElevatedCard(Modifier.fillMaxWidth()) {
-                val restantes = 5 - UserRepo.users.size
-                ListItem(
-                    headlineContent = { Text("Cuentas disponibles restantes") },
-                    trailingContent = { Text("$restantes/5", style = MaterialTheme.typography.titleMedium) }
-                )
-            }
         }
+    }
+}
+
+/** Mapea errores comunes de Firebase Auth a mensajes entendibles */
+private fun mapAuthError(e: Exception): String {
+    val code = (e as? FirebaseAuthException)?.errorCode
+    return when (code) {
+        "ERROR_EMAIL_ALREADY_IN_USE"  -> "Ese email ya está registrado."
+        "ERROR_INVALID_EMAIL"         -> "Email con formato inválido."
+        "ERROR_WEAK_PASSWORD"         -> "La contraseña debe tener al menos 6 caracteres."
+        "ERROR_OPERATION_NOT_ALLOWED" -> "Método de registro deshabilitado en Firebase."
+        "ERROR_NETWORK_REQUEST_FAILED"-> "Problema de red. Reintenta."
+        else -> e.localizedMessage ?: "No fue posible registrar."
     }
 }

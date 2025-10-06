@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "807875074387",
+    "project_id": "nutriapp-accesibilidad",
+    "storage_bucket": "nutriapp-accesibilidad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:807875074387:android:50932e65ef20f9409ee9a6",
+        "android_client_info": {
+          "package_name": "com.example.accesibilidad"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg2IM-QDxKIgKtP-sF2vy4dMDhjRrbjIY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

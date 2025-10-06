@@ -1,10 +1,16 @@
 package com.example.accesibilidad.screens
 
+import android.app.Activity
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,6 +37,30 @@ fun SearchRecipesScreen(
 
     val categories = remember { listOf("Todas", "Desayuno", "Almuerzo", "Cena", "Snack") }
     val maxCalories = maxCaloriesText.toIntOrNull()
+
+    // ----- Lanzadores para voz -----
+    val speechLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { res ->
+        if (res.resultCode == Activity.RESULT_OK) {
+            val spoken = res.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            val text = spoken?.firstOrNull().orEmpty()
+            if (text.isNotBlank()) {
+                query = text
+                if (ttsEnabled) speak("Buscando $text")
+            }
+        }
+    }
+
+    fun startSpeech() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
+        }
+        speechLauncher.launch(intent)
+    }
 
     val results by remember(query, selectedCategory, maxCaloriesText) {
         mutableStateOf(
@@ -87,7 +117,15 @@ fun SearchRecipesScreen(
                         onValueChange = { query = it },
                         label = { Text("Por nombre o descripción") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = {
+                            IconButton(onClick = { startSpeech() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Mic,
+                                    contentDescription = "Buscar por voz"
+                                )
+                            }
+                        }
                     )
                 }
             }
@@ -161,12 +199,12 @@ fun SearchRecipesScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 200.dp) // asegura presencia visual aunque haya pocos ítems
+                        .heightIn(min = 200.dp)
                         .padding(vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
-                    // Encabezado visual
+                    // Encabezado
                     item {
                         ListItem(
                             headlineContent = {

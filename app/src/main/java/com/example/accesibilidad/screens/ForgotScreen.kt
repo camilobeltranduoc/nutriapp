@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -14,7 +15,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.example.accesibilidad.R
-import com.example.accesibilidad.data.UserRepo
+import com.example.accesibilidad.data.firebase.FirebaseUserRepo
+import com.google.firebase.auth.FirebaseAuthException
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,11 +26,14 @@ fun ForgotScreen(
     ttsEnabled: Boolean = false,
     speak: (String) -> Unit = {}
 ) {
-    var user by remember { mutableStateOf("") }
-    var lastMsg by remember { mutableStateOf<String?>(null) }
+    var emailOrUser by rememberSaveable { mutableStateOf("") }
+    var lastMsg     by remember { mutableStateOf<String?>(null) }
+    var loading     by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
-    val focus = LocalFocusManager.current
-    val canRecover = user.isNotBlank()
+    val focus   = LocalFocusManager.current
+    val scope   = rememberCoroutineScope()
+    val canRecover = emailOrUser.isNotBlank()
 
     Scaffold(
         topBar = {
@@ -56,7 +62,7 @@ fun ForgotScreen(
                         modifier = Modifier.semantics { heading() }
                     )
                     Text(
-                        "Ingresa tu usuario para mostrar la contraseña registrada (solo con fines de demo).",
+                        "Ingresa tu email y te enviaremos un correo para restablecerla.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -69,13 +75,11 @@ fun ForgotScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedTextField(
-                        value = user,
-                        onValueChange = { user = it },
-                        label = { Text("Usuario") },
+                        value = emailOrUser,
+                        onValueChange = { emailOrUser = it },
+                        label = { Text("Email o usuario") },
                         singleLine = true,
-                        leadingIcon = {
-                            Icon(Icons.Filled.AccountCircle, contentDescription = "Usuario")
-                        },
+                        leadingIcon = { Icon(Icons.Filled.AccountCircle, contentDescription = "Usuario/Email") },
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Done),
                         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { focus.clearFocus() }),
                         modifier = Modifier.fillMaxWidth()
@@ -83,22 +87,35 @@ fun ForgotScreen(
 
                     Button(
                         onClick = {
-                            val pwd = UserRepo.getPassword(user.trim())
-                            val msg = if (pwd != null) {
-                                "Tu contraseña registrada es: $pwd"
-                            } else {
-                                "Usuario no encontrado."
+                            loading = true
+                            scope.launch {
+                                try {
+                                    FirebaseUserRepo.sendPasswordReset(emailOrUser.trim())
+                                    val ok = "Correo de recuperación enviado"
+                                    lastMsg = ok
+                                    Toast.makeText(context, ok, Toast.LENGTH_SHORT).show()
+                                    if (ttsEnabled) speak(ok)
+                                    onBack()
+                                } catch (e: Exception) {
+                                    val msg = mapAuthError(e)
+                                    lastMsg = msg
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    if (ttsEnabled) speak(msg)
+                                } finally {
+                                    loading = false
+                                }
                             }
-                            lastMsg = msg
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                            if (ttsEnabled) speak(msg)
                         },
-                        enabled = canRecover,
+                        enabled = canRecover && !loading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 56.dp)
                     ) {
-                        Text("Recuperar")
+                        if (loading) {
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(if (loading) "Enviando…" else "Enviar correo")
                     }
                 }
             }
@@ -113,5 +130,16 @@ fun ForgotScreen(
                 }
             }
         }
+    }
+}
+
+/** Mapea errores comunes de Firebase Auth a mensajes entendibles */
+private fun mapAuthError(e: Exception): String {
+    val code = (e as? FirebaseAuthException)?.errorCode
+    return when (code) {
+        "ERROR_USER_NOT_FOUND"          -> "No existe un usuario con ese email."
+        "ERROR_INVALID_EMAIL"           -> "Email con formato inválido."
+        "ERROR_NETWORK_REQUEST_FAILED"  -> "Problema de red. Intenta nuevamente."
+        else -> e.localizedMessage ?: "No fue posible enviar el correo."
     }
 }
